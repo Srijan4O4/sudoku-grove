@@ -4,12 +4,13 @@ An original classic Sudoku game by **Prototype Plays**, built with Phaser and th
 
 **Play:** https://prototype-plays-sudoku-grove.spry-hippo-9654.chatgpt.site
 
-## Milestone 1 · v1.0.0
+## Current version · v1.0.1
 
 A complete playable 9×9 Sudoku game with:
 
 - Seeded, uniquely solvable puzzles at Easy, Medium and Hard clue densities.
 - A daily shared puzzle, pencil notes, undo, erase and hints.
+- Correct-number locking: confirmed entries cannot be accidentally overwritten or erased, including after reload.
 - Touch, mouse and keyboard controls, responsive layouts and accessible cell labels.
 - Light, Dark and Grove themes, settings, timer, scores and statistics.
 - Standalone browser saves and YouTube SDK cloud saves, readiness and pause/resume handling.

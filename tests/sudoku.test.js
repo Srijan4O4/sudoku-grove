@@ -41,3 +41,14 @@ test('score follows a consistent best-score metric', () => {
   const g = newGame('medium','score'); g.elapsed=100;g.mistakes=2;g.hints=1;
   assert.equal(score(g),7200); g.elapsed=999999; assert.equal(score(g),100);
 });
+test('correct placements and hints lock against replacement, erase and notes without penalties', () => {
+  const g=newGame('easy','locked');const i=g.puzzle.indexOf(0);
+  enter(g,i,g.solution[i]);const before=structuredClone(g);
+  for(const [value,noteMode] of [[g.solution[i]%9+1,false],[0,false],[3,true]]){
+    assert.equal(enter(g,i,value,noteMode),false);assert.deepEqual(g,before);
+  }
+  const saved={version:1,game:g,stats:{wins:0,best:0,days:[]}};
+  const restored=validateSave(saved).game;assert.equal(enter(restored,i,0),false);assert.equal(restored.mistakes,0);
+  const h=hint(g,i);assert.ok(h);assert.equal(enter(g,h.index,h.value%9+1),false);
+  assert.equal(g.mistakes,0);
+});

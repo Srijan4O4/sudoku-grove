@@ -65,6 +65,7 @@ function select(i, focus = true) { selected = i; render(); if (focus) $('board')
 function input(value) {
   if (!canPlay()) return;
   if (game.puzzle[selected]) { feedback('This number is a clue. Choose an empty square.'); return; }
+  if (game.board[selected] && game.board[selected] === game.solution[selected]) { feedback('This number is correct and locked. Choose another cell.'); return; }
   if (enter(game, selected, value, notesMode && value !== 0)) {
     feedback(value && !notesMode && preferences.autoCheck && value !== game.solution[selected] ? 'Not quite · try another number.' : notesMode && value ? 'Note added. Press Notes again to enter numbers.' : 'Progress saved as you play.'); changed();
   }
@@ -82,14 +83,17 @@ function render() {
   const chosen = game.board[selected];
   [...$('board').children].forEach((cell, i) => {
     const value = game.board[i], wrong = value && value !== game.solution[i];
+    const locked = !!value && value === game.solution[i];
     const classes = ['cell', game.puzzle[i] ? 'clue' : 'entry'];
+    if (locked && !game.puzzle[i]) classes.push('confirmed');
+    cell.dataset.locked = String(locked);
     if (i === selected) classes.push('selected');
     else if (preferences.highlight && chosen && value === chosen) classes.push('same');
     else if (peers(i, selected)) classes.push('peer');
     if (wrong && preferences.autoCheck) classes.push('wrong');
     if (value && game.board.some((v,j)=>v===value && peers(i,j))) classes.push('duplicate');
     cell.className = classes.join(' '); cell.tabIndex = i === selected ? 0 : -1;
-    cell.setAttribute('aria-label', `Row ${Math.floor(i / 9) + 1}, column ${i % 9 + 1}, ${value || 'empty'}${game.puzzle[i] ? ', clue' : ''}${wrong && preferences.autoCheck ? ', incorrect' : ''}${game.notes[i].length ? ', notes ' + game.notes[i].join(', ') : ''}`);
+    cell.setAttribute('aria-label', `Row ${Math.floor(i / 9) + 1}, column ${i % 9 + 1}, ${value || 'empty'}${game.puzzle[i] ? ', clue' : locked ? ', correct and locked' : ''}${wrong && preferences.autoCheck ? ', incorrect' : ''}${game.notes[i].length ? ', notes ' + game.notes[i].join(', ') : ''}`);
     cell.setAttribute('aria-current', String(i === selected));
     cell.innerHTML = value ? `<span>${value}</span>` : game.notes[i].length ? `<span class="pencil-grid">${Array.from({length:9},(_,n)=>`<i>${game.notes[i].includes(n+1)? n+1 : ''}</i>`).join('')}</span>` : '';
   });
@@ -101,7 +105,7 @@ function render() {
   $('live-score').textContent = game.won ? score(game).toLocaleString('en') : '—';
   $('mistakes').textContent = `${game.mistakes} mistake${game.mistakes === 1 ? '' : 's'}`;
   $('notes').setAttribute('aria-pressed', String(notesMode)); $('notes-label').textContent = notesMode ? 'ON' : 'OFF';
-  $('undo').disabled = !game.history.length || game.won; $('erase').disabled = !!game.puzzle[selected] || game.won;
+  $('undo').disabled = !game.history.length || game.won; $('erase').disabled = !!game.puzzle[selected] || (!!game.board[selected] && game.board[selected] === game.solution[selected]) || game.won;
   $('hint').disabled = game.won; $('notes').disabled = game.won; $('pause').disabled = game.won;
   $('wins').textContent = stats.wins; $('best').textContent = stats.best.toLocaleString('en');
   $('mode-label').textContent = game.daily ? `DAILY CHALLENGE · ${game.daily}` : 'CLASSIC NUMBER PUZZLE';

@@ -54,7 +54,7 @@ export function newGame(difficulty, seed, daily = null) {
 export function score(game) { return Math.max(100, ({easy: 5000, medium: 8000, hard: 12000}[game.difficulty]) - game.elapsed * 2 - game.mistakes * 100 - game.hints * 400); }
 export function snapshot(game) { return { board: [...game.board], notes: game.notes.map(n => [...n]) }; }
 export function enter(game, index, value, noteMode = false) {
-  if (game.won || game.puzzle[index] || !Number.isInteger(value) || value < 0 || value > 9) return false;
+  if (game.won || game.puzzle[index] || (game.board[index] !== 0 && game.board[index] === game.solution[index]) || !Number.isInteger(value) || value < 0 || value > 9) return false;
   if (!noteMode && game.board[index] === value) return false;
   game.history.push(snapshot(game)); if (game.history.length > 100) game.history.shift();
   if (noteMode && value) {

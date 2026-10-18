@@ -8,10 +8,21 @@ test('notes, undo, values, mistakes, erase, save and reload',async({page})=>{
   const cell=page.locator('.cell.entry').first();await cell.click();
   await page.getByRole('button',{name:'Notes OFF'}).click();await page.getByRole('button',{name:'Enter 3',exact:true}).click();
   await expect(cell).toHaveAttribute('aria-label',/notes 3/);await page.locator('#undo').click();await expect(cell).not.toHaveAttribute('aria-label',/notes/);
-  await page.locator('#notes').click();await page.getByRole('button',{name:'Enter 1',exact:true}).click();
-  await expect(cell).toHaveText('1');await expect(page.locator('#save-status')).toContainText('Saved');
-  const index=await cell.getAttribute('data-index');await page.reload();await expect(page.locator(`[data-index="${index}"]`)).toHaveText('1');
+  const wrong=await page.evaluate(()=>{const g=JSON.parse(localStorage.getItem('sudoku-grove-v1')).game;return g.solution[g.puzzle.indexOf(0)]%9+1});
+  await page.locator('#notes').click();await page.getByRole('button',{name:`Enter ${wrong}`,exact:true}).click();
+  await expect(cell).toHaveText(String(wrong));await expect(page.locator('#save-status')).toContainText('Saved');
+  const index=await cell.getAttribute('data-index');await page.reload();await expect(page.locator(`[data-index="${index}"]`)).toHaveText(String(wrong));
   await page.locator(`[data-index="${index}"]`).click();await page.locator('#erase').click();await expect(page.locator(`[data-index="${index}"]`)).toHaveText('');
+});
+test('correct entries are locked after placement and reload; wrong attempts do not add mistakes',async({page})=>{
+  await open(page);await page.locator('#hint').click();
+  const locked=page.locator('.cell.confirmed').first();const index=await locked.getAttribute('data-index');const value=await locked.textContent();
+  await locked.click();await page.getByRole('button',{name:`Enter ${Number(value)%9+1}`,exact:true}).click();
+  await expect(locked).toHaveText(value);await expect(page.locator('#meta-mistakes')).toHaveText('0');await expect(page.locator('#erase')).toBeDisabled();
+  await expect(page.locator('#feedback')).toContainText('correct and locked');await page.keyboard.press('Delete');await expect(locked).toHaveText(value);
+  await page.reload();const restored=page.locator(`[data-index="${index}"]`);await restored.click();
+  await expect(restored).toHaveAttribute('data-locked','true');await page.keyboard.press(String(Number(value)%9+1));
+  await expect(restored).toHaveText(value);await expect(page.locator('#meta-mistakes')).toHaveText('0');
 });
 test('new puzzle, daily ritual, keyboard navigation, pause, help, and hints',async({page})=>{
   await open(page);await page.locator('#new-game').click();await page.locator('[data-level=hard]').click();await page.locator('#start-game').click();await expect(page.locator('#level')).toHaveText('Hard');
