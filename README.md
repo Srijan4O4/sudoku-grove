@@ -4,12 +4,13 @@ An original classic Sudoku game by **Prototype Plays**, built with Phaser and th
 
 **Play:** https://prototype-plays-sudoku-grove.spry-hippo-9654.chatgpt.site
 
-## Current version · v1.0.1
+## Current version · v1.0.2
 
 A complete playable 9×9 Sudoku game with:
 
 - Seeded, uniquely solvable puzzles at Easy, Medium and Hard clue densities.
 - A daily shared puzzle, pencil notes, undo, erase and hints.
+- Candidate-aware notes: conflicting row, column and box values are blocked, placements remove conflicts, and old saved notes are repaired.
 - Correct-number locking: confirmed entries cannot be accidentally overwritten or erased, including after reload.
 - Touch, mouse and keyboard controls, responsive layouts and accessible cell labels.
 - Light, Dark and Grove themes, settings, timer, scores and statistics.
@@ -56,6 +57,8 @@ The upload ZIP contains the contents of `dist/`, with `index.html` at its root. 
 The public web demo is separate from a YouTube listing. Publishing on YouTube requires acceptance, channel onboarding, portal access, device testing and certification. See the [official publishing requirements](https://developers.google.com/youtube/gaming/playables/certification/requirements) and [portal guide](https://developers.google.com/youtube/gaming/playables/developer_portal).
 
 See [MILESTONES.md](MILESTONES.md) for the version history. Each milestone has a separate commit and version tag.
+
+Current verification: **16 engine/platform tests + 8 browser tests passed**, with additional live notes regression verification. The YouTube interest application has been submitted; the game is awaiting YouTube review/onboarding and certification before a public YouTube listing.
 
 ## Third-party licenses
 

@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { newGame, enter, undo, hint, peers, score, validateSave, snapshot } from './sudoku.js';
+import { newGame, enter, undo, hint, peers, score, validateSave, candidates } from './sudoku.js';
 import { Platform } from './platform.js';
 import './style.css';
 import './classic.css';
@@ -66,6 +66,7 @@ function input(value) {
   if (!canPlay()) return;
   if (game.puzzle[selected]) { feedback('This number is a clue. Choose an empty square.'); return; }
   if (game.board[selected] && game.board[selected] === game.solution[selected]) { feedback('This number is correct and locked. Choose another cell.'); return; }
+  if (notesMode && value && !game.notes[selected].includes(value) && !candidates(game.board, selected).includes(value)) { feedback(`${value} is already present in this row, column or box.`); return; }
   if (enter(game, selected, value, notesMode && value !== 0)) {
     feedback(value && !notesMode && preferences.autoCheck && value !== game.solution[selected] ? 'Not quite · try another number.' : notesMode && value ? 'Note added. Press Notes again to enter numbers.' : 'Progress saved as you play.'); changed();
   }
@@ -114,7 +115,7 @@ function render() {
   [...$('numbers').children].forEach((button, i) => {
     const count = game.board.filter(v => v === i + 1).length;
     button.querySelector('small').textContent = Math.max(0, 9 - count);
-    button.disabled = game.won;
+    button.disabled = game.won || (notesMode && !candidates(game.board, selected).includes(i + 1));
     button.classList.toggle('complete', count >= 9);
   });
   scene?.drawBoard(); renderPause();

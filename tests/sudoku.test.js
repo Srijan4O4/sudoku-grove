@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { generate, solve, validBoard, newGame, enter, undo, hint, score, validateSave } from '../src/sudoku.js';
+import { generate, solve, validBoard, newGame, enter, undo, hint, score, validateSave, candidates, peers } from '../src/sudoku.js';
 
 for (const difficulty of ['easy', 'medium', 'hard']) test(`${difficulty}: 25 seeds produce valid, uniquely solvable puzzles`, () => {
   for (let seed = 0; seed < 25; seed++) {
@@ -17,11 +17,40 @@ test('same seed and level produce the same daily puzzle; different seeds vary', 
 test('clues are immutable; note edits and values undo together; penalties survive undo', () => {
   const g = newGame('easy','edits'); const i = g.puzzle.indexOf(0), clue = g.puzzle.findIndex(Boolean);
   assert.equal(enter(g, clue, 0), false);
-  enter(g, i, 2, true); assert.deepEqual(g.notes[i], [2]);
-  enter(g, i, 3, true); undo(g); assert.deepEqual(g.notes[i], [2]);
+  const note=candidates(g.board,i)[0];
+  enter(g, i, note, true); assert.deepEqual(g.notes[i], [note]);
+  enter(g, i, note, true); undo(g); assert.deepEqual(g.notes[i], [note]);
   const wrong = g.solution[i] % 9 + 1; enter(g,i,wrong); assert.equal(g.mistakes,1);
-  undo(g); assert.equal(g.board[i],0); assert.deepEqual(g.notes[i],[2]); assert.equal(g.mistakes,1);
+  undo(g); assert.equal(g.board[i],0); assert.deepEqual(g.notes[i],[note]); assert.equal(g.mistakes,1);
   enter(g,i,g.solution[i]); assert.equal(g.board[i],g.solution[i]); assert.deepEqual(g.notes[i],[]);
+});
+test('notes exclude existing digits from the row, column and box without consuming undo or mistakes',()=>{
+  for(const source of [36,4,30]) {
+    const g=newGame('medium','notes-blocked');g.puzzle.fill(0);g.board.fill(0);
+    g.board[source]=g.solution[source];const value=g.board[source];
+    const before=structuredClone(g);assert.equal(enter(g,40,value,true),false);assert.deepEqual(g,before);
+    const allowed=candidates(g.board,40)[0];assert.equal(enter(g,40,allowed,true),true);assert.deepEqual(g.notes[40],[allowed]);
+    assert.equal(enter(g,40,allowed,true),true);assert.deepEqual(g.notes[40],[]);
+  }
+});
+test('all placements prune row, column and box notes, retain unrelated notes, and undo restores them',()=>{
+  for(const source of [36,4,30]) for(const correct of [true,false]) {
+    const g=newGame('medium','notes-prune');g.puzzle.fill(0);g.board.fill(0);
+    const value=correct?g.solution[source]:g.solution[source]%9+1;
+    const other=value%9+1, unrelated=g.board.findIndex((_,i)=>i!==source&&!peers(i,source)&&i!==40);
+    g.notes[40]=[value,other].sort();g.notes[unrelated]=[value];
+    assert.equal(enter(g,source,value),true);assert.deepEqual(g.notes[40],[other]);assert.deepEqual(g.notes[unrelated],[value]);
+    undo(g);assert.deepEqual(g.notes[40],[value,other].sort());assert.deepEqual(g.notes[unrelated],[value]);
+  }
+});
+test('hints clean notes and old saves repair impossible notes without losing progress',()=>{
+  const g=newGame('medium','saved-notes');const i=g.puzzle.indexOf(0);enter(g,i,g.solution[i]);
+  g.elapsed=42;g.notes=Array.from({length:81},()=>[1,2,3,4,5,6,7,8,9]);
+  const saved={version:1,game:g,stats:{wins:0,best:0,days:[]}};const restored=validateSave(saved).game;
+  assert.deepEqual(restored.board,g.board);assert.equal(restored.elapsed,42);
+  restored.notes.forEach((notes,j)=>assert.deepEqual(notes,candidates(restored.board,j)));
+  assert.equal(g.notes[i].length,9,'migration must not mutate input');
+  hint(restored,i);restored.notes.forEach((notes,j)=>assert.ok(notes.every(n=>candidates(restored.board,j).includes(n))));
 });
 test('hints complete a puzzle and won puzzles reject further input', () => {
   const g = newGame('hard','hint-win'); let count = 0;

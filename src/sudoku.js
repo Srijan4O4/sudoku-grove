@@ -53,9 +53,16 @@ export function newGame(difficulty, seed, daily = null) {
 }
 export function score(game) { return Math.max(100, ({easy: 5000, medium: 8000, hard: 12000}[game.difficulty]) - game.elapsed * 2 - game.mistakes * 100 - game.hints * 400); }
 export function snapshot(game) { return { board: [...game.board], notes: game.notes.map(n => [...n]) }; }
+export function pruneNotes(game) {
+  game.notes = game.notes.map((notes, i) => {
+    const allowed = candidates(game.board, i);
+    return [...new Set(notes)].filter(n => allowed.includes(n)).sort((a, b) => a - b);
+  });
+}
 export function enter(game, index, value, noteMode = false) {
   if (game.won || game.puzzle[index] || (game.board[index] !== 0 && game.board[index] === game.solution[index]) || !Number.isInteger(value) || value < 0 || value > 9) return false;
   if (!noteMode && game.board[index] === value) return false;
+  if (noteMode && value && (game.board[index] || (!game.notes[index].includes(value) && !candidates(game.board, index).includes(value)))) return false;
   game.history.push(snapshot(game)); if (game.history.length > 100) game.history.shift();
   if (noteMode && value) {
     if (game.board[index]) { game.history.pop(); return false; }
@@ -63,13 +70,13 @@ export function enter(game, index, value, noteMode = false) {
   } else {
     game.board[index] = value; game.notes[index] = [];
     if (value && value !== game.solution[index]) game.mistakes++;
-    if (value && value === game.solution[index]) for (let j = 0; j < 81; j++) if (peers(index, j)) game.notes[j] = game.notes[j].filter(n => n !== value);
+    pruneNotes(game);
   }
   return true;
 }
 export function undo(game) {
   if (game.won || !game.history.length) return false;
-  const previous = game.history.pop(); game.board = previous.board; game.notes = previous.notes; return true;
+  const previous = game.history.pop(); game.board = previous.board; game.notes = previous.notes; pruneNotes(game); return true;
 }
 export function hint(game, index) {
   if (game.won) return null;
@@ -96,5 +103,7 @@ export function validateSave(value) {
   for (const level of Object.keys(LEVELS)) { const record = stats.byLevel?.[level]; if (record && Number.isSafeInteger(record.wins) && record.wins > 0 && Number.isSafeInteger(record.bestTime) && record.bestTime >= 0) byLevel[level] = {wins:record.wins,bestTime:record.bestTime}; }
   const p = value.preferences || {};
   const preferences = {theme:['light','dark','grove'].includes(p.theme)?p.theme:'light',autoCheck:p.autoCheck!==false,highlight:p.highlight!==false};
-  return { version: 1, game: { ...g, won: g.board.every((v,i) => v === g.solution[i]), history: [] }, stats: { wins: stats.wins, best: stats.best, days, byLevel }, preferences };
+  const restoredGame = { ...g, notes: g.notes.map(n => [...n]), won: g.board.every((v,i) => v === g.solution[i]), history: [] };
+  pruneNotes(restoredGame);
+  return { version: 1, game: restoredGame, stats: { wins: stats.wins, best: stats.best, days, byLevel }, preferences };
 }
